@@ -109,7 +109,7 @@ void controlKeyboard0(double& coeff1,
         _getch();
 
       switch(keyCode){
-        case 113: // 'q'
+        case 113: // 'q' 1 поток: у
           if(LOWER_BOUND_A < coeff1)
             coeff1 -= 1.0;
 
@@ -151,20 +151,61 @@ void controlKeyboard0(double& coeff1,
           // контроль границ при ручном изменении
           coeff3 = coeff3 > UPPER_BOUND_C ? UPPER_BOUND_C : coeff3;
           break;
-        case 49: // 'e'
+        case 49: // '1' уменьшаем частоту изменения коэффициента
           if(1.0 < frequency)
             frequency -= 1.0;
           break;
-        case 50 : // 'r'
+        case 50 : // '2' увеличиваем частоту изменения коэффициента
             frequency += 1.0;
           break;
-        case 101 : // 'e'
+        case 51 : // '3'
+          {
+          // Запуск 3 потоков, запускающих функцию изменения коэффициента а/b/с
+          std::thread coeffManager1(&controlKeyboard1,
+                                    std::ref(coeff1),
+                                    std::ref(frequency),
+                                    LOWER_BOUND_A,
+                                    UPPER_BOUND_A,
+                                    1,
+                                    std::ref(pauseA),
+                                    std::ref(pauseB),
+                                    std::ref(pauseC),
+                                    std::ref(mainMutex));
+          coeffManager1.detach();
+
+          std::thread coeffManager2(&controlKeyboard1,
+                                    std::ref(coeff2),
+                                    std::ref(frequency),
+                                    LOWER_BOUND_B,
+                                    UPPER_BOUND_B,
+                                    2,
+                                    std::ref(pauseA),
+                                    std::ref(pauseB),
+                                    std::ref(pauseC),
+                                    std::ref(mainMutex));
+            coeffManager2.detach();
+
+            std::thread coeffManager3(&controlKeyboard1,
+                                      std::ref(coeff3),
+                                      std::ref(frequency),
+                                      LOWER_BOUND_C,
+                                      UPPER_BOUND_C,
+                                      3,
+                                      std::ref(pauseA),
+                                      std::ref(pauseB),
+                                      std::ref(pauseC),
+                                      std::ref(mainMutex));
+            coeffManager3.detach();
+
+            break;
+          }
+        case 101 : // 'e' пауза 1 потока
             pauseA = pauseA == true? false : true;
           break;
-        case 100 : // 'd'
+        case 100 : // 'd' пауза 2 потока
             pauseB = pauseB == true? false : true;
           break;
-        case 99 : // 'c'
+        case 99 : // 'c' пауза 3 потока
             pauseC = pauseC == true? false : true;
           break;
         case 102 : // 'f'  Если задан флаг вывода в файл - выводим

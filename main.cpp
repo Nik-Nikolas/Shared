@@ -52,10 +52,11 @@ int main()
     //Длина осей
     SetWindowExtEx(hDC, 500, 500, NULL);
 
+    //Определяем облась вывода
     int xView = 500;
     int yView = xView;
-    //Определяем облась вывода
     SetViewportExtEx(hDC, xView, -yView, NULL);
+
     //Начало координат
     SetViewportOrgEx(hDC, xView / 6, yView / 2, NULL);
 
@@ -86,6 +87,7 @@ int main()
     std::uninitialized_fill(yBuff, yBuff + BUFF_SIZE, 0.0);
 
     // Запуск потока, запускающего функцию обработки событий клавиатуры
+    // т.е. сейчас в процессе -2 потока
     std::thread control (&controlKeyboard0,
                           std::ref(a),
                           std::ref(b),
@@ -106,43 +108,6 @@ int main()
                           BUFF_SIZE,
                           std::ref(mainMutex));
     control.detach();
-
-    // Запуск потоков, запускающих функцию изменения коэффициента а/b/с
-    std::thread coeffManager1(&controlKeyboard1,
-                              std::ref(a),
-                              std::ref(frequency),
-                              LOWER_BOUND_A,
-                              UPPER_BOUND_A,
-                              1,
-                              std::ref(pauseA),
-                              std::ref(pauseB),
-                              std::ref(pauseC),
-                              std::ref(mainMutex));
-    coeffManager1.detach();
-
-    std::thread coeffManager2(&controlKeyboard1,
-                              std::ref(b),
-                              std::ref(frequency),
-                              LOWER_BOUND_B,
-                              UPPER_BOUND_B,
-                              2,
-                              std::ref(pauseA),
-                              std::ref(pauseB),
-                              std::ref(pauseC),
-                              std::ref(mainMutex));
-    coeffManager2.detach();
-
-    std::thread coeffManager3(&controlKeyboard1,
-                              std::ref(c),
-                              std::ref(frequency),
-                              LOWER_BOUND_C,
-                              UPPER_BOUND_C,
-                              3,
-                              std::ref(pauseA),
-                              std::ref(pauseB),
-                              std::ref(pauseC),
-                              std::ref(mainMutex));
-    coeffManager3.detach();
 
     // Построение графика
     while(true)
