@@ -1,49 +1,22 @@
-// Построить график по формуле y = A + B * sin ( C * t ). Где t – время в секундах.
-// Коэффициенты A , B ,C контролируются каждый своим потоком. Диапазон изменений A [3-7], B [1-3], c [1-10].
-// Сделать возможность
-// приостанавливать любой поток,
-// задавать коэффициенты вручную.
-// При работе потока
-// соответствующий коэффициент
-// меняется в указанных пределах в зависимости от времени  по  синусойде
-// с заданной оператором частотой.
-// По команде оператора запускается поток отображения на экране монитора
-// и поток записи графика в текстовый файл.
-// По команде оператора запускается поток отображения на экране монитора
-// и поток записи графика в текстовый файл.
-
-
-// Управление потоками:
-//
-// Для ручного изменения коэффициента- переведите соотв. поток в режим паузы.
-// Повторное нажатие паузы - запуск потока.
-//
-// Коэффициент А: кнопки 'q' 'w' - изменение с шагом 1. 'e' - пауза потока
-// Коэффициент B: кнопки 'a' 's' - изменение с шагом 1. 'd' - пауза потока
-// Коэффициент C: кнопки 'z' 'x' - изменение с шагом 1. 'c' - пауза потока
-//
-// Изменение частоты (Гц) оператором: кнопки '1' '2' - изменение с шагом 1.
-//
-// Запуск потока записи графика в файл на диске: кнопка 'f'
 #include "header.h"
 
 std::mutex* MutexDevice::m_ = nullptr;
 
 int main()
 {
-    // Консоль - на весь экран
+    // Делаем консоль на весь экран
     HWND hwnd;
     char Title[1024];
-    int iWidth = GetSystemMetrics(SM_CXSCREEN);  // разрешение экрана по горизонтали
-    int iHeight = GetSystemMetrics(SM_CYSCREEN); // разрешение экрана по вертикали
+    auto iWidth = GetSystemMetrics(SM_CXSCREEN);  // разрешение экрана по горизонтали
+    auto iHeight = GetSystemMetrics(SM_CYSCREEN); // разрешение экрана по вертикали
     GetConsoleTitle(Title, 1024); // Узнаем имя окна
-    hwnd=FindWindow(NULL, Title); // Узнаем hwnd окна
-    ShowWindow(hwnd,SW_SHOWMAXIMIZED);
+    hwnd = FindWindow(NULL, Title); // Узнаем hwnd окна
+    ShowWindow(hwnd, SW_SHOWMAXIMIZED);
 
-    // Перо
+    // Создаем объект пера
     HPEN hPen = (HPEN)GetStockObject(WHITE_PEN);
 
-    // получить контекст отображения
+    // Получаем контекст отображения
     HDC hDC = GetDC(NULL);
 
     //логические единицы отображаем, как физические
@@ -52,12 +25,12 @@ int main()
     //Длина осей
     SetWindowExtEx(hDC, 500, 500, NULL);
 
-    //Определяем облась вывода
-    int xView = 500;
-    int yView = xView;
+    //Определяем область вывода
+    auto xView = 500;
+    auto yView = xView;
     SetViewportExtEx(hDC, xView, -yView, NULL);
 
-    //Начало координат
+    // Задаем начало координат
     SetViewportOrgEx(hDC, xView / 6, yView / 2, NULL);
 
     // Флаги паузы потоков
@@ -65,7 +38,7 @@ int main()
     auto pauseB = false;
     auto pauseC = false;
 
-    // Коэффициенты A , B , C
+    // Коэффициенты A ,B ,C
     auto a = static_cast<double>(LOWER_BOUND_A);
     auto b = static_cast<double>(LOWER_BOUND_B);
     auto c = static_cast<double>(LOWER_BOUND_C);
@@ -76,18 +49,17 @@ int main()
     // Флаг вывода графика в текстовый файл
     auto isFileOutput = false;
 
-    // Создали мьютекс
+    // Создаем объект мьютекса
     std::unique_ptr<std::mutex> mainMutex( MutexDevice::getInstance() );
 
-    // Буфер + кэш графика
-    const auto BUFF_SIZE = 150;
+    // Создаем буфер + кэш графика
     double xBuff[BUFF_SIZE];
     double yBuff[BUFF_SIZE];
     std::uninitialized_fill(xBuff, xBuff + BUFF_SIZE, 0.0);
     std::uninitialized_fill(yBuff, yBuff + BUFF_SIZE, 0.0);
 
     // Запуск потока, запускающего функцию обработки событий клавиатуры
-    // т.е. сейчас в процессе -2 потока
+    // т.е. в процессе после создания данного потока будет 2 потока (1- main и 2- control)
     std::thread control (&controlKeyboard0,
                           std::ref(a),
                           std::ref(b),
@@ -153,10 +125,7 @@ int main()
                isFileOutput,
                BUFF_SIZE,
                xBuff,
-               yBuff,
-               0,
-               0,
-               0);
+               yBuff);
     }
 
     ReleaseDC(NULL, hDC); // освободить контекст отображения

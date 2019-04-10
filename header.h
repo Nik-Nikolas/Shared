@@ -29,6 +29,8 @@ const auto UPPER_BOUND_B = 3;
 const auto LOWER_BOUND_C = 1;
 const auto UPPER_BOUND_C = 10;
 
+// Размер буфера - кэша координат графика ф-ции
+const auto BUFF_SIZE = 200;
 
 
 // Функция обработки событий клавиатуры
@@ -66,9 +68,9 @@ void drawFunc(HPEN hPen,
               const int BUFF_SIZE,
               double* xBuff,
               double* yBuff,
-              const int R,
-              const int G,
-              const int B);
+              int R = 0,
+              int G = 0,
+              int B = 0);
 
 
 // Функция изменения коэффициентов а/b/с и постановки соотв. потоков на паузу

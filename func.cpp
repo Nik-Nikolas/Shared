@@ -4,7 +4,7 @@
 void saveChartToFile(const char* charFullPathDoubleBackSlashed,
                      double* xBuff,
                      double* yBuff,
-                     const size_t BUFF_SIZE,
+                     const int BUFF_SIZE,
                      std::unique_ptr<std::mutex>& mainMutex){
    while(true){
 
@@ -37,22 +37,23 @@ void drawFunc(HPEN hPen,
               const int BUFF_SIZE,
               double* xBuff,
               double* yBuff,
-              const int R,
-              const int G,
-              const int B){
+              int R,
+              int G,
+              int B){
 
     MoveToEx(hDC, 0, Y_OFFSET + a * Y_MULTIPLIER1 + b, NULL); //перемещаемся в начало координат
 
     //Создание пера
-    hPen = CreatePen(1, 2, RGB(R, G, B));
+    hPen = CreatePen(PS_SOLID, 2, RGB(R, G, B));
     SelectObject(hDC, hPen);
 
     // Рисуем график на BUFF_SIZE точек. Коэффициенты Y_MULTIPLIER - для подбора
     // вывода масштабированного графика на монитор
-    auto y = 0;
 
     // Рисуем график (задан не нулевой цвет)
     if( R != 0 || G != 0 || B != 0){
+      auto y = 0;
+
       for(auto x = 0; x < BUFF_SIZE; ++x){
         y = Y_OFFSET + a * Y_MULTIPLIER1 + b * Y_MULTIPLIER1 * sin(c * Y_MULTIPLIER2 * x);
 
@@ -160,13 +161,14 @@ void controlKeyboard0(double& coeff1,
           break;
         case 51 : // '3'
           {
-          // Запуск 3 потоков, запускающих функцию изменения коэффициента а/b/с
+          // Запуск 3 потоков (3, 4, 5 по порядковому номеру для процесса),
+          // запускающих функцию изменения коэффициента A/B/C
           std::thread coeffManager1(&controlKeyboard1,
                                     std::ref(coeff1),
                                     std::ref(frequency),
                                     LOWER_BOUND_A,
                                     UPPER_BOUND_A,
-                                    1,
+                                    3,
                                     std::ref(pauseA),
                                     std::ref(pauseB),
                                     std::ref(pauseC),
@@ -178,7 +180,7 @@ void controlKeyboard0(double& coeff1,
                                     std::ref(frequency),
                                     LOWER_BOUND_B,
                                     UPPER_BOUND_B,
-                                    2,
+                                    4,
                                     std::ref(pauseA),
                                     std::ref(pauseB),
                                     std::ref(pauseC),
@@ -190,7 +192,7 @@ void controlKeyboard0(double& coeff1,
                                       std::ref(frequency),
                                       LOWER_BOUND_C,
                                       UPPER_BOUND_C,
-                                      3,
+                                      5,
                                       std::ref(pauseA),
                                       std::ref(pauseB),
                                       std::ref(pauseC),
@@ -239,7 +241,7 @@ void controlKeyboard0(double& coeff1,
 
 
 
-// Функция изменения коэффициентов а/b/с и постановки соотв. потоков на паузу
+// Функция изменения коэффициентов A/B/C и постановки соотв. потоков на паузу
 void controlKeyboard1(double& coeff,
                       const double& frequency,
                       const int LOWER_BOUND,
@@ -257,17 +259,17 @@ void controlKeyboard1(double& coeff,
 
   auto steps = 0.0;
   auto step = 0.0;
-  auto delayMsecs = 0;
+  auto delayMicroSecs = 0;
 
   auto frequencyLocal = 0.0;
   auto pauseALocal = false;
   auto pauseBLocal = false;
   auto pauseCLocal = false;
   while(true){
-
-    // Критическая секция - чтение частоты изменения коэффициентов а/b/c
+    // Критическая секция - чтение частоты изменения коэффициентов A/B/C
     // и флагов пауз
     mainMutex->lock();
+
     frequencyLocal = frequency;
     pauseALocal = pauseA;
     pauseBLocal = pauseB;
@@ -275,37 +277,36 @@ void controlKeyboard1(double& coeff,
     mainMutex->unlock();
 
     // Ставим поток с соотв. ID на паузу (пока пауза не будет снята (проверка флага))
-    if((1 == threadId && pauseALocal) ||
-       (2 == threadId && pauseBLocal) ||
-       (3 == threadId && pauseCLocal)){
+    if((3 == threadId && pauseALocal) ||
+       (4 == threadId && pauseBLocal) ||
+       (5 == threadId && pauseCLocal)){
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
-    // вычисление шага изменения коэффициента а/b/c
+    // вычисление шага изменения коэффициента A/B/C
     steps = (UPPER_BOUND - LOWER_BOUND);
     assert(steps > 0.0);
 
     step = 1.0 * 3.14159 / steps;
 
-    // вычисление периода для коэффициента а/b/c
+    // вычисление периода для коэффициента A/B/C
     time += step;
 
     // Перезапуск периода (контроль переполнения double)
     if(time > std::numeric_limits<double>::max() / 2.0)
       time = MIN_SIN_ANGLE;
 
-    // Спать между шагами изменения коэффициента а/b/c
-    delayMsecs = 1.0 / frequencyLocal * 1000.0;
-    delayMsecs /= steps;
-    assert(delayMsecs > 0);
-    Sleep(delayMsecs);
+    // Спать между шагами изменения коэффициента A/B/C
+    delayMicroSecs = static_cast<int>(1.0 / frequencyLocal * 1000000.0 / steps);
+    assert(delayMicroSecs > 0);
+    std::this_thread::sleep_for(std::chrono::microseconds(delayMicroSecs));
 
-    // Критическая секция - изменение коэффициента а/b/c
+    // Критическая секция - изменение коэффициента A/B/C
     mainMutex->lock();
     coeff =  (UPPER_BOUND - LOWER_BOUND) / 2 +
              (UPPER_BOUND - LOWER_BOUND) / 2 * sin(time) +
-             LOWER_BOUND;
+              LOWER_BOUND;
     mainMutex->unlock();
   }
 }
