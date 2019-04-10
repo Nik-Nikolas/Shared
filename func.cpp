@@ -160,31 +160,36 @@ void controlKeyboard0(double& coeff1,
             frequency += 1.0;
           break;
         case 51 : // '3'
-          {
+        {
           // Запуск 3 потоков (3, 4, 5 по порядковому номеру для процесса),
-          // запускающих функцию изменения коэффициента A/B/C
-          std::thread coeffManager1(&controlKeyboard1,
-                                    std::ref(coeff1),
-                                    std::ref(frequency),
-                                    LOWER_BOUND_A,
-                                    UPPER_BOUND_A,
-                                    3,
-                                    std::ref(pauseA),
-                                    std::ref(pauseB),
-                                    std::ref(pauseC),
-                                    std::ref(mainMutex));
-          coeffManager1.detach();
+          // запускающих функцию изменения коэффициента A/B/C.
+          // Потоки запускаются только один раз для текущего процесса.
+          static auto isThreadsPackLaunched = false;
 
-          std::thread coeffManager2(&controlKeyboard1,
-                                    std::ref(coeff2),
-                                    std::ref(frequency),
-                                    LOWER_BOUND_B,
-                                    UPPER_BOUND_B,
-                                    4,
-                                    std::ref(pauseA),
-                                    std::ref(pauseB),
-                                    std::ref(pauseC),
-                                    std::ref(mainMutex));
+          if(false == isThreadsPackLaunched){
+
+            std::thread coeffManager1(&controlKeyboard1,
+                                      std::ref(coeff1),
+                                      std::ref(frequency),
+                                      LOWER_BOUND_A,
+                                      UPPER_BOUND_A,
+                                      3,
+                                      std::ref(pauseA),
+                                      std::ref(pauseB),
+                                      std::ref(pauseC),
+                                      std::ref(mainMutex));
+            coeffManager1.detach();
+
+            std::thread coeffManager2(&controlKeyboard1,
+                                      std::ref(coeff2),
+                                      std::ref(frequency),
+                                      LOWER_BOUND_B,
+                                      UPPER_BOUND_B,
+                                      4,
+                                      std::ref(pauseA),
+                                      std::ref(pauseB),
+                                      std::ref(pauseC),
+                                      std::ref(mainMutex));
             coeffManager2.detach();
 
             std::thread coeffManager3(&controlKeyboard1,
@@ -199,16 +204,19 @@ void controlKeyboard0(double& coeff1,
                                       std::ref(mainMutex));
             coeffManager3.detach();
 
-            break;
+            isThreadsPackLaunched = true;
           }
+
+          break;
+        }
         case 101 : // 'e' пауза 1 потока
-            pauseA = pauseA == true? false : true;
+          pauseA = pauseA == true? false : true;
           break;
         case 100 : // 'd' пауза 2 потока
-            pauseB = pauseB == true? false : true;
+          pauseB = pauseB == true? false : true;
           break;
         case 99 : // 'c' пауза 3 потока
-            pauseC = pauseC == true? false : true;
+          pauseC = pauseC == true? false : true;
           break;
         case 102 : // 'f'  Если задан флаг вывода в файл - выводим
         {
